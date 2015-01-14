@@ -1,0 +1,260 @@
+---
+title: "Coursera - Regression Models - Course Project"
+output: pdf_document
+font: Courier
+fontsize: 11pt
+geometry: margin=0.4in
+---
+
+```{r, echo=FALSE}
+library(lattice)
+library(MASS)
+
+data(mtcars)
+#head(mtcars)
+at<-mtcars[mtcars$am==0,]
+mt<-mtcars[mtcars$am==1,]
+color_at <- 'sienna'
+color_mt <- 'green'
+au_gear_str <- 'automatic'
+ma_gear_str <- 'manual'
+gear_names <- c(au_gear_str, ma_gear_str)
+gear_color <- c(color_at, color_mt)
+def.par <- par(no.readonly = TRUE)
+options(digits=7)
+
+# models formulas
+LM0.init_formula <- mpg ~ factor(am)
+LM1.init_formula <- mpg ~ wt+hp+disp+factor(am)
+LM2.init_formula <- mpg ~ disp+hp+drat+wt+qsec+factor(cyl)+factor(am)+factor(gear)+factor(carb)
+LM3.init_formula <- mpg ~ disp+hp+drat+wt+qsec+factor(cyl)+factor(am)+factor(gear)+factor(carb)
+
+# create linear regression models
+LM0.f <- lm(LM0.init_formula, data=mtcars)
+LM1.f <- lm(LM1.init_formula, data=mtcars)
+LM2.f <- lm(LM2.init_formula, data=mtcars)
+LM3.f <- step(lm(LM3.init_formula, data=mtcars), direction="both", trace=0) # or 'stepAIC' ?
+
+# get residuals
+LM0.resid <- resid(LM0.f)
+LM1.resid <- resid(LM1.f)
+LM2.resid <- resid(LM2.f)
+LM3.resid <- resid(LM3.f)
+
+# calculate SSE
+LM0.SSE <- sum(LM0.resid^2)
+LM1.SSE <- sum(LM1.resid^2)
+LM2.SSE <- sum(LM2.resid^2)
+LM3.SSE <- sum(LM3.resid^2)
+
+# calculate MSE
+LM0.MSE <- LM0.SSE/LM0.f$df.residual
+LM1.MSE <- LM1.SSE/LM1.f$df.residual
+LM2.MSE <- LM2.SSE/LM2.f$df.residual
+LM3.MSE <- LM3.SSE/LM3.f$df.residual
+
+# get R-squared
+LM0.Rs    <- summary(LM0.f)$r.squared
+LM0.adjRs <- summary(LM0.f)$adj.r.squared
+LM1.Rs    <- summary(LM1.f)$r.squared
+LM1.adjRs <- summary(LM1.f)$adj.r.squared
+LM2.Rs    <- summary(LM2.f)$r.squared
+LM2.adjRs <- summary(LM2.f)$adj.r.squared
+LM3.Rs    <- summary(LM3.f)$r.squared
+LM3.adjRs <- summary(LM3.f)$adj.r.squared
+
+
+# create string representations of initial and final models
+
+model_strings <- function(LMf) {
+  cf <- as.character(as.formula(LMf))
+  ms <- paste(cf[2],cf[1],cf[3]) 
+  nm<-data.frame(names(coef(LMf)),coef(LMf))
+  es<-paste(c(cf[2],' = ',format(nm[1,2],digits=4), lapply(2:nrow(nm), function(i) paste(ifelse(sign(nm[i,2])>0,'+',''),format(nm[i,2], digits=4),'*',nm[i,1]))), collapse='')
+  gsub(' ','',c(ms,es))
+} 
+
+mstr<-model_strings(LM0.f)
+LM0.model_string <- mstr[1]
+LM0.equation_string <- mstr[2]
+
+mstr<-model_strings(LM1.f)
+LM1.model_string <- mstr[1]
+LM1.equation_string <- mstr[2]
+
+mstr<-model_strings(LM3.f)
+LM2.model_string <- mstr[1]
+LM2.equation_string <- mstr[2]
+
+mstr<-model_strings(LM3.f)
+LM3.model_string <- mstr[1]
+LM3.equation_string <- mstr[2]
+
+#summary(LM3.f)
+
+options(digits=2)
+```
+#Executive summary
+
+*Is an automatic or manual transmission better for MPG ?* Manual transmission is better for ***mpg***.   
+*Quantify the MPG difference between automatic and manual transmissions.* The best linear regression model to calculate the ***mpg*** value is : $`r LM3.equation_string`$. In accordance to the model the manual transmission increases ***mpg*** by `r LM3.f$coefficients[4]` for the **same values of wt and qsec**.
+ 
+```{r,echo=FALSE}
+options(digits=7)
+```
+#Data analysis
+Parameters summary:  
+ - **mpg**, **disp**, **hp**, **drat**, **wt**, **qsec** - continious quantitative data;   
+ - **gear**, **carb**, **cyl** - discrete quantitative data with strong physical relations;  
+ - **vs**, **am**  - qualitative(categorical) data, indicate different states, the only possible operation is comparation 'equality / non-equality'.  
+ 
+The Spearman correlation between parameters is shown on Fig.1 (Appendix A). We can see:  
+ - **vs** is correlated significantly with **cyl**, **disp**, and **hp** (>0.7), so **vs** could be excluded from model;  
+ - correlation between **mpg** and **qsec** < 0.5, so **qsec** could be excluded from model;  
+ - **cyl** demonstrates high correlation with **hp** and **disp**; **cyl** could be excluded from model;  
+ - correlations **mpg**~**carb**, **mpg**~**drat** and **mpg**~**gear** are in range 0.5-0.7 . It means the level of correlation is high but not significant. Let's exclude parameters **carb**, **drat** and **gear** from simplest models.   
+
+From the scatterplot on Fig.2 we can see relatively strong dependencies **mpg**~**wt**, **mpg**~**hp**, **mpg**~**disp**.   
+  
+Let's compare four linear regression models    
+  
+Model|Initial formula            | Notes                                   
+-----|---------------------------|----------------------------------------
+ A   |mpg ~ factor(am)           | simplest relation between **mpg** and **am**
+ B   |mpg ~ wt+hp+disp+factor(am)| considers most valuable parameters: **wt**, **hp** and **disp**
+ C   |mpg ~ . - vs               | attempt to use all parameters but **vs**
+ D   |mpg ~ . - vs               | try to improve the previous model
+
+#Models analysis 
+```{r,echo=FALSE}
+options(digits=2)
+```
+1. There are some things we can say about the **mpg**~**am** dependencies before the linear regression model creation and analysis. As we can see on Fig.3 and Fig.4 the **mpg**'s mean for manual transmission is higher, it is distributed from 15 to 35, and about 95% of **mpg**'s values are in range [26~30]. But it overlaps with automatic gear **mpg** distribution, so prediction of **mpg** using **am** only seems not reliable enough.  
+2. Linear regression models A,B and C were created using R command ***lm(formula,...)***; model D is obtained from model B using R command ***step(lm,...)***. The final model D is :  
+$`r LM3.equation_string`$  
+ 
+\pagebreak
+ Results of the models residuals analysis are shown in the table below:    
+
+Model| SSE | MSE | Residuals range | R-squared | Adjusted R-squared
+-----|-----|-----|-----------------|-----------|--------------------
+ A   |`r LM0.SSE`|`r LM0.MSE`|`r min(LM0.resid)` ~ `r max(LM0.resid)`|`r LM0.Rs`|`r LM0.adjRs`       
+ B   |`r LM1.SSE`|`r LM1.MSE`|`r min(LM1.resid)` ~ `r max(LM1.resid)`|`r LM1.Rs`|`r LM1.adjRs`       
+ C   |`r LM2.SSE`|`r LM2.MSE`|`r min(LM2.resid)` ~ `r max(LM2.resid)`|`r LM2.Rs`|`r LM2.adjRs`       
+ D   |`r LM3.SSE`|`r LM3.MSE`|`r min(LM3.resid)` ~ `r max(LM3.resid)`|`r LM3.Rs`|`r LM3.adjRs`       
+
+3. From the table above, Fig.5 and Fig.6 we can see:
+ + Model A (equation $`r  LM0.equation_string`$) has high MSE value;
+ + Residuals are not normally distributed;
+ + Range of the residuals variation is too wide;
+ + Only ~35% of ***mpg*** variability could be explained by model;
+ + __Conclusion:__ model $`r  LM0.equation_string`$ is not accurate enough to represent the ***mpg~am*** dependency.  
+
+4. The model B -  $`r  LM1.equation_string`$ - demonstrates results just little bit worse then optimal one. But as we can see from the model's coefficients summary table below the $Pr(>|t|)$ values for ***disp*** and ***factor(am)1*** are greater then 0.05. It means the probability that these variables are **not** significant is high, so model B should be rejected.  
+
+```{r createtable, results='asis', echo=FALSE }
+# print well-formated table of model's coefficients
+
+LM3cf<-summary(LM1.f)$coefficients
+colnames(LM3cf)<-gsub("\\|", "\\\\|", colnames(LM3cf))
+
+cat(paste('\\ ',' | ', paste(colnames(LM3cf), collapse=" | ")), paste(replicate(ncol(LM3cf)+1,"---"), collapse=' | '),sep="\n")
+cat(mapply(paste, rownames(LM3cf), " | ", apply(LM3cf,1,function(x) paste(lapply(as.list(x), function(y) paste(format(y,digits=5))), collapse=" | ")) ), sep="\n")
+
+options(digits=2)
+```
+
+5. The residulas distribution for all four models is shown on Fig.7. We can see the model C demostrates the minimal range [lower quartile ~ upper quartile], but it contains outliers. Model C has more degrees of freedom then model D (`r summary(LM2.f)$df[1]` vs `r summary(LM3.f)$df[1]`) as well.  
+6. Summary of the best model D:
+ + Our assumption the ***qsec*** is not significant for ***mpg*** is wrong, the best model includes this parameter;
+ + The best model is $`r  LM3.equation_string`$;
+ + Residuals are not normally distributed (see Fig.8 and Fig.9);
+ + About 84% of ***mpg*** variability could be explained by the model;
+ + __Conclusion:__ model $`r  LM3.equation_string`$ is not perfect, but it is acceptable for ***mpg*** evaluation. It shows the ***mpg*** depends on ***wt***, ***qsec*** and ***am*** parameters and the ***am***'s value ***'1'*** - 'manual transmission' - increases ***mpg*** by `r LM3.f$coefficients[4]` for the same values of ***wt*** and ***qsec***.
+
+ -----------------------------------------------------------------------
+
+\pagebreak
+
+#Appendix A
+```{r,echo=FALSE, fig.width = 7, fig.height = 4.5}
+Mcs <- cor(mtcars, method = 'spearman')
+#Mcs
+layout(matrix(c(1),1,1))
+rgb.palette <- colorRampPalette(c("blue","pink","white","yellow","green"), space = "rgb")
+levelplot(Mcs, main="Fig.1. Spearman correlation matrix chart.", xlab="", ylab="", col.regions=rgb.palette(120), cuts=100, at=seq(-1,1,0.02))
+```
+
+```{r,echo=FALSE,fig.width = 7, fig.height = 5}
+pairs(~mpg+wt+cyl+qsec+hp+cyl+gear+vs,data=mtcars, main="Fig.2. Scatterplot matrix.",
+      pch=21, bg=gear_color[mtcars$am+1], lower.panel=NULL)
+legend(0.20, 0.35, gear_names, fill=gear_color)
+```
+
+```{r,echo=FALSE, fig.width = 7, fig.height = 5}
+boxplot(mpg~am, data=mtcars, main="Fig.3. Summary 'MPG ~ am' distribution chart.",xlab="Gear's type", ylab="Miles/gallon", names=gear_names,col = gear_color)
+```
+
+```{r, echo=FALSE, fig.width = 7, fig.height = 5}
+den_at <- density(at$mpg)
+den_mt <- density(mt$mpg)
+
+den_min_x <- min(min(den_at$x), min(den_mt$x))
+den_max_x <- max(max(den_at$x), max(den_mt$x))
+den_max_y <- max(max(den_at$y), max(den_mt$y))
+
+layout(matrix(c(1,2,3,3), 2, 2, byrow = FALSE))
+
+hist(at$mpg, xlab="miles/gallon", main="Automatic gear",col = color_at, breaks=6)
+hist(mt$mpg, xlab="miles/gallon",main="Manual gear",col = color_mt, breaks=6)
+
+plot(den_at, main="'Miles per gallon' distribution.",
+     xlab="miles/gallon", ylab="Density",
+     xlim=c(den_min_x, den_max_x), ylim=c(0, den_max_y), col = color_at)
+legend("topright", inset=.05, title="Type of the gear",
+    gear_names, fill=gear_color, horiz=FALSE)
+lines(den_mt, xlim=c(den_min_x, den_max_x), ylim=c(0, den_max_y), col = color_mt)
+title("Fig.4. MPG distribution and density.", outer=TRUE, line = -1)
+```
+
+```{r, echo=FALSE, fig.width = 7, fig.height = 5}
+layout(matrix(c(1,2),1,2)) # optional 2 graphs/page
+plot(LM0.f, which=c(1,2))
+title("Fig.5. Residuals summary for model A", outer=TRUE, line = -2)
+```
+
+```{r, echo=FALSE, fig.width = 7, fig.height = 5}
+layout(matrix(c(1),1,1))
+hist(LM0.resid, breaks=as.integer((max(LM0.resid)-min(LM0.resid))/2), main='Fig.6. Residuals distribution for model A', xlab=paste("model '",LM0.equation_string ,"' residuals"), freq=FALSE)
+d_a<-density(LM0.resid)
+lines(d_a, col='blue')
+x_at<-seq(-4,4,length=100)*sd(LM0.resid) + mean(LM0.resid)
+hx_at<-dnorm(x_at,mean(LM0.resid),sd(LM0.resid))
+lines(x_at,hx_at,col='red')
+legend("topright", inset=.05, c('Expected normal','Actual'), fill=c('red','blue'))
+```
+
+```{r, echo=FALSE, fig.width = 7, fig.height = 5}
+layout(matrix(c(1),1,1))
+boxplot(LM0.resid,LM1.resid,LM2.resid,LM3.resid, main='Figure 7. Residuals for different models.', ylab='Residual distribution',xlab="Models", names=c('A','B','C','D'), col='lightgray')
+```
+
+```{r, echo=FALSE, fig.width = 7, fig.height = 5}
+layout(matrix(c(1,2),1,2)) # optional 2 graphs/page
+plot(LM3.f, which=c(1,2))
+title("Fig.8. Residuals summary for model D", outer=TRUE, line = -2)
+```
+
+```{r, echo=FALSE, fig.width = 7, fig.height = 5}
+layout(matrix(c(1),1,1))
+hist(LM3.resid, breaks=as.integer((max(LM0.resid)-min(LM0.resid))/2), main='Fig.9. Residuals distribution for model D', xlab=paste("model '",LM3.equation_string ,"' residuals"), freq=FALSE)
+d_a<-density(LM3.resid)
+lines(d_a, col='blue')
+x_at<-seq(-4,4,length=100)*sd(LM3.resid) + mean(LM3.resid)
+hx_at<-dnorm(x_at,mean(LM3.resid),sd(LM3.resid))
+lines(x_at,hx_at,col='red')
+legend("topright", inset=.05, c('Expected normal','Actual'), fill=c('red','blue'))
+```
+
+ -----------------------------------------------------------------------
+
