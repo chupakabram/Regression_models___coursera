@@ -1,6 +1,8 @@
 ---
 title: "Coursera - Regression Models - Course Project"
 output: pdf_document
+documentclass: article
+classoption: a4paper
 font: Courier
 fontsize: 11pt
 geometry: margin=0.4in
@@ -63,6 +65,11 @@ LM2.adjRs <- summary(LM2.f)$adj.r.squared
 LM3.Rs    <- summary(LM3.f)$r.squared
 LM3.adjRs <- summary(LM3.f)$adj.r.squared
 
+# shapiro-wilk tests
+LM0.ShW_p <-shapiro.test(LM0.resid)$p.value
+LM1.ShW_p <-shapiro.test(LM1.resid)$p.value
+LM2.ShW_p <-shapiro.test(LM2.resid)$p.value
+LM3.ShW_p <-shapiro.test(LM3.resid)$p.value
 
 # create string representations of initial and final models
 
@@ -129,28 +136,28 @@ Model|Initial formula            | Notes
 ```{r,echo=FALSE}
 options(digits=2)
 ```
-1. There are some things we can say about the **mpg**~**am** dependencies before the linear regression model creation and analysis. As we can see on Fig.3 and Fig.4 the **mpg**'s mean for manual transmission is higher, it is distributed from 15 to 35, and about 95% of **mpg**'s values are in range [26~30]. But it overlaps with automatic gear **mpg** distribution, so prediction of **mpg** using **am** only seems not reliable enough.  
-2. Linear regression models A,B and C were created using R command ***lm(formula,...)***; model D is obtained from model B using R command ***step(lm,...)***. The final model D is :  
-$`r LM3.equation_string`$  
- 
+1. There are some things we can say about the **mpg**~**am** dependencies before the linear regression model creation and analysis. As we can see on Fig.3 and Fig.4 the **mpg**'s mean for manual transmission is higher, it is distributed from 15 to 35, and about 95% of **mpg**'s values are in range [26~30]. But it overlaps with automatic gear **mpg** distribution, so prediction of **mpg** using **am** only seems not reliable enough.
+2. Linear regression models A,B and C were created using R command ***lm(formula,...)***; model D is obtained from model B using R command ***step(lm,...)***. The final model D is : $`r LM3.equation_string`$. Results of the models residuals analysis are shown in the Table 1. 
+3. From the Tabl.1. below, Fig.5 and Fig.6 we can see:
+    + Model A (equation $`r  LM0.equation_string`$) has high MSE value;
+    + Residuals are not normally distributed;
+    + Range of the residuals variation is too wide;
+    + Only ~35% of ***mpg*** variability could be explained by model;
+    + __Conclusion:__ model $`r  LM0.equation_string`$ is not accurate enough to represent the ***mpg~am*** dependency. 
 \pagebreak
- Results of the models residuals analysis are shown in the table below:    
 
-Model| SSE | MSE | Residuals range | R-squared | Adjusted R-squared
------|-----|-----|-----------------|-----------|--------------------
- A   |`r LM0.SSE`|`r LM0.MSE`|`r min(LM0.resid)` ~ `r max(LM0.resid)`|`r LM0.Rs`|`r LM0.adjRs`       
- B   |`r LM1.SSE`|`r LM1.MSE`|`r min(LM1.resid)` ~ `r max(LM1.resid)`|`r LM1.Rs`|`r LM1.adjRs`       
- C   |`r LM2.SSE`|`r LM2.MSE`|`r min(LM2.resid)` ~ `r max(LM2.resid)`|`r LM2.Rs`|`r LM2.adjRs`       
- D   |`r LM3.SSE`|`r LM3.MSE`|`r min(LM3.resid)` ~ `r max(LM3.resid)`|`r LM3.Rs`|`r LM3.adjRs`       
+*Table 1. Residuals analysis.*
 
-3. From the table above, Fig.5 and Fig.6 we can see:
- + Model A (equation $`r  LM0.equation_string`$) has high MSE value;
- + Residuals are not normally distributed;
- + Range of the residuals variation is too wide;
- + Only ~35% of ***mpg*** variability could be explained by model;
- + __Conclusion:__ model $`r  LM0.equation_string`$ is not accurate enough to represent the ***mpg~am*** dependency.  
+Model| SSE | MSE | Residuals range | R-squared | Adjusted R-squared | Shapiro-Wilk p-value
+-----|:---:|:---:|:---------------:|:---------:|:------------------:|:-----------------------:|
+ A   |`r LM0.SSE`|`r LM0.MSE`|`r min(LM0.resid)` ~ `r max(LM0.resid)`|`r LM0.Rs`|`r LM0.adjRs`|`r LM0.ShW_p`     
+ B   |`r LM1.SSE`|`r LM1.MSE`|`r min(LM1.resid)` ~ `r max(LM1.resid)`|`r LM1.Rs`|`r LM1.adjRs`|`r LM1.ShW_p`       
+ C   |`r LM2.SSE`|`r LM2.MSE`|`r min(LM2.resid)` ~ `r max(LM2.resid)`|`r LM2.Rs`|`r LM2.adjRs`|`r LM2.ShW_p`       
+ D   |`r LM3.SSE`|`r LM3.MSE`|`r min(LM3.resid)` ~ `r max(LM3.resid)`|`r LM3.Rs`|`r LM3.adjRs`|`r LM3.ShW_p`       
 
 4. The model B -  $`r  LM1.equation_string`$ - demonstrates results just little bit worse then optimal one. But as we can see from the model's coefficients summary table below the $Pr(>|t|)$ values for ***disp*** and ***factor(am)1*** are greater then 0.05. It means the probability that these variables are **not** significant is high, so model B should be rejected.  
+
+*Table 2. Model B coefficients analysis.*
 
 ```{r createtable, results='asis', echo=FALSE }
 # print well-formated table of model's coefficients
@@ -164,20 +171,20 @@ cat(mapply(paste, rownames(LM3cf), " | ", apply(LM3cf,1,function(x) paste(lapply
 options(digits=2)
 ```
 
-5. The residulas distribution for all four models is shown on Fig.7. We can see the model C demostrates the minimal range [lower quartile ~ upper quartile], but it contains outliers. Model C has more degrees of freedom then model D (`r summary(LM2.f)$df[1]` vs `r summary(LM3.f)$df[1]`) as well.  
+5. The residulas distribution for all four models is shown on Fig.7. We can see the model C demostrates the minimal range [lower quartile ~ upper quartile], but it contains outliers. Model C has more degrees of freedom then model D (`r summary(LM2.f)$df[1]` vs `r summary(LM3.f)$df[1]`) as well.
 6. Summary of the best model D:
- + Our assumption the ***qsec*** is not significant for ***mpg*** is wrong, the best model includes this parameter;
- + The best model is $`r  LM3.equation_string`$;
- + Residuals are not normally distributed (see Fig.8 and Fig.9);
- + About 84% of ***mpg*** variability could be explained by the model;
- + __Conclusion:__ model $`r  LM3.equation_string`$ is not perfect, but it is acceptable for ***mpg*** evaluation. It shows the ***mpg*** depends on ***wt***, ***qsec*** and ***am*** parameters and the ***am***'s value ***'1'*** - 'manual transmission' - increases ***mpg*** by `r LM3.f$coefficients[4]` for the same values of ***wt*** and ***qsec***.
+    + Our assumption the ***qsec*** is not significant for ***mpg*** is wrong, the best model includes this parameter;
+    + The best model is $`r  LM3.equation_string`$;
+    + Residuals are not normally distributed (see Tabl.1, Fig.8 and Fig.9);
+    + About 84% of ***mpg*** variability could be explained by the model;
+    + __Conclusion:__ model $`r  LM3.equation_string`$ is not perfect, but it is acceptable for ***mpg*** evaluation. It shows the ***mpg*** depends on ***wt***, ***qsec*** and ***am*** parameters and the ***am***'s value ***'1'*** - 'manual transmission' - increases ***mpg*** by `r LM3.f$coefficients[4]` for the same values of ***wt*** and ***qsec***.
 
  -----------------------------------------------------------------------
 
 \pagebreak
 
 #Appendix A
-```{r,echo=FALSE, fig.width = 7, fig.height = 4.5}
+```{r,echo=FALSE, fig.width = 7, fig.height = 5}
 Mcs <- cor(mtcars, method = 'spearman')
 #Mcs
 layout(matrix(c(1),1,1))
