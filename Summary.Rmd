@@ -146,7 +146,7 @@ options(digits=2)
     + __Conclusion:__ model $`r  LM0.equation_string`$ is not accurate enough to represent the ***mpg~am*** dependency. 
 \pagebreak
 
-*Table 1. Residuals analysis.*
+$$Table\ 1.\ Residuals\ analysis.$$
 
 Model| SSE | MSE | Residuals range | R-squared | Adjusted R-squared | Shapiro-Wilk p-value
 -----|:---:|:---:|:---------------:|:---------:|:------------------:|:-----------------------:|
@@ -157,7 +157,7 @@ Model| SSE | MSE | Residuals range | R-squared | Adjusted R-squared | Shapiro-Wi
 
 4. The model B -  $`r  LM1.equation_string`$ - demonstrates results just little bit worse then optimal one. But as we can see from the model's coefficients summary table below the $Pr(>|t|)$ values for ***disp*** and ***factor(am)1*** are greater then 0.05. It means the probability that these variables are **not** significant is high, so model B should be rejected.  
 
-*Table 2. Model B coefficients analysis.*
+$$Table\ 2.\ Model\ B\ coefficients\ analysis.$$
 
 ```{r createtable, results='asis', echo=FALSE }
 # print well-formated table of model's coefficients
